@@ -1,0 +1,56 @@
+/* Card body background */
+.profile-content {
+  padding: 2.5rem;
+  background: #eaf2ff;
+}
+
+/* Info rows */
+.info-row {
+  background: #cce0ff;
+  border: 1px solid #b3d1ff;
+}
+.info-row:hover {
+  background: #b3d1ff;
+  border-color: #66a3ff;
+}
+
+/* Labels & values */
+.info-label { color: #003366; }
+.info-value  { color: #00509e; }
+
+/* Section headings */
+.profile-section h3 { color: #003366; }
+.profile-section h3::before { background: #007acc; }
+
+/* Dividers */
+.profile-section { border-bottom: 2px solid #b3d1ff; }
+
+/* Secondary button */
+.profile-btn.secondary {
+  background: #cce0ff;
+  color: #003366;
+  border: 1px solid #66a3ff;
+}
+.profile-btn.secondary:hover { background: #b3d1ff; }
+
+/* Danger button */
+.profile-btn.danger {
+  background: #eaf2ff;
+  color: #003366;
+  border: 1px solid #66a3ff;
+}
+
+/* Add gap between info rows */
+.info-grid {
+  gap: 10px;
+}
+
+/* Round the corners */
+.info-row {
+  border-radius: 14px;
+}
+
+/* Round the action buttons too */
+.profile-btn {
+  border-radius: 12px;
+}
