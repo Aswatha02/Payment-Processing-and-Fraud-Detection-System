@@ -6,17 +6,22 @@ const walletAPI = axios.create({
   baseURL: WALLET_API_URL,
 });
 
+const TRANSACTION_API_URL = process.env.REACT_APP_TRANSACTION_API_URL || 'http://localhost:8003';
+const transactionAPI = axios.create({
+  baseURL: TRANSACTION_API_URL,
+});
+
 // Add token to requests
-walletAPI.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+const authInterceptor = (config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+};
+
+walletAPI.interceptors.request.use(authInterceptor, (error) => Promise.reject(error));
+transactionAPI.interceptors.request.use(authInterceptor, (error) => Promise.reject(error));
 
 const walletService = {
   // Get wallet balance
@@ -32,7 +37,7 @@ const walletService = {
   // Get transaction history
   getTransactions: async (userId, skip = 0, limit = 50) => {
     try {
-      const response = await walletAPI.get(`/wallet/${userId}/transactions?skip=${skip}&limit=${limit}`);
+      const response = await transactionAPI.get(`/transactions/${userId}/history?skip=${skip}&limit=${limit}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || { detail: 'Failed to fetch transactions' };
@@ -68,9 +73,9 @@ const walletService = {
   // Transfer funds (P2P)
   transfer: async (userId, recipientId, amount) => {
     try {
-      const response = await walletAPI.post('/wallet/transfer', {
-        user_id: userId,
-        recipient_id: parseInt(recipientId),
+      const response = await transactionAPI.post('/transactions/transfer', {
+        sender_id: userId,
+        receiver_id: parseInt(recipientId),
         amount: parseFloat(amount)
       });
       return response.data;

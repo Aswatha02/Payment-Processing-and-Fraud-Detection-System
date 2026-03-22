@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Wallet, Ledger
-from .schemas import WalletCreate, TransactionRequest, TransferRequest
+from .schemas import WalletCreate, TransactionRequest
 import httpx
 import os
 
@@ -233,116 +233,69 @@ async def withdraw(
     }
 
 
-# 💸 TRANSFER MONEY (P2P)
-@router.post("/transfer")
-async def transfer(
-    req: TransferRequest,
+# 🔄 INTERNAL CREDIT (SYSTEM)
+@router.post("/credit")
+async def internal_credit(
+    req: TransactionRequest,
     authorization: str = Header(...),
     db: Session = Depends(get_db)
 ):
-    """Transfer money to another user (P2P)"""
-    token_data = await validate_user_token(authorization)
-    token_user_id = token_data.get("user_id")
-    
-    if token_user_id != req.user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    if req.user_id == req.recipient_id:
-        raise HTTPException(status_code=400, detail="Cannot transfer to self")
-        
-    await check_kyc_status(req.user_id)
-    
-    if req.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be positive")
+    """Internal system credit - SYSTEM ONLY"""
+    check_system_token(authorization)
 
-    # Lock rows in deterministic order to prevent deadlocks
-    user_ids = sorted([req.user_id, req.recipient_id])
-    wallets = db.query(Wallet).filter(Wallet.user_id.in_(user_ids)).with_for_update().all()
-    
-    if len(wallets) != 2:
-        raise HTTPException(status_code=404, detail="One or both wallets not found")
-        
-    sender_wallet = next((w for w in wallets if w.user_id == req.user_id), None)
-    receiver_wallet = next((w for w in wallets if w.user_id == req.recipient_id), None)
-
-    if sender_wallet.balance < req.amount:
-        # Rollback the lock simply implicitly by raising
-        raise HTTPException(status_code=400, detail="Insufficient balance")
-
-    sender_old_balance = sender_wallet.balance
-    receiver_old_balance = receiver_wallet.balance
-
-    sender_wallet.balance -= req.amount
-    receiver_wallet.balance += req.amount
-    
-    # Record sender ledger
-    ledger_debit = Ledger(
-        wallet_id=sender_wallet.wallet_id,
-        type="debit",
-        amount=req.amount,
-        balance_before=sender_old_balance,
-        balance_after=sender_wallet.balance,
-        description=f"Transfer to user {req.recipient_id}"
-    )
-    
-    # Record receiver ledger
-    ledger_credit = Ledger(
-        wallet_id=receiver_wallet.wallet_id,
-        type="credit",
-        amount=req.amount,
-        balance_before=receiver_old_balance,
-        balance_after=receiver_wallet.balance,
-        description=f"Transfer from user {req.user_id}"
-    )
-    
-    db.add_all([ledger_debit, ledger_credit])
-    db.commit()
-
-    return {
-        "message": "Transfer successful",
-        "balance": sender_wallet.balance,
-        "amount": req.amount,
-        "recipient_id": req.recipient_id
-    }
-
-
-
-
-
-
-# 📊 GET TRANSACTION HISTORY
-@router.get("/{user_id}/transactions")
-async def get_transactions(
-    user_id: int,
-    skip: int = 0,
-    limit: int = 50,
-    authorization: str = Header(...),
-    db: Session = Depends(get_db)
-):
-    """Get transaction history - USER ONLY"""
-    token_data = await validate_user_token(authorization)
-    token_user_id = token_data.get("user_id")
-    
-    if token_user_id != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
+    wallet = db.query(Wallet).filter(Wallet.user_id == req.user_id).first()
     if not wallet:
         raise HTTPException(status_code=404, detail="Wallet not found")
-    
-    transactions = db.query(Ledger)\
-        .filter(Ledger.wallet_id == wallet.wallet_id)\
-        .order_by(Ledger.timestamp.desc())\
-        .offset(skip)\
-        .limit(limit)\
-        .all()
-    
-    return {
-        "transactions": transactions,
-        "total": db.query(Ledger).filter(Ledger.wallet_id == wallet.wallet_id).count(),
-        "skip": skip,
-        "limit": limit
-    }
+
+    old_balance = wallet.balance
+    wallet.balance += req.amount
+
+    db.add(Ledger(
+        wallet_id=wallet.wallet_id, 
+        type="credit", 
+        amount=req.amount, 
+        balance_before=old_balance, 
+        balance_after=wallet.balance, 
+        source="system", 
+        description="System Credit"
+    ))
+    db.commit()
+
+    return {"status": "ok", "balance": wallet.balance}
+
+
+# 🔄 INTERNAL DEBIT (SYSTEM)
+@router.post("/debit")
+async def internal_debit(
+    req: TransactionRequest,
+    authorization: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    """Internal system debit - SYSTEM ONLY"""
+    check_system_token(authorization)
+
+    wallet = db.query(Wallet).filter(Wallet.user_id == req.user_id).first()
+    if not wallet:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+
+    if wallet.balance < req.amount:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+
+    old_balance = wallet.balance
+    wallet.balance -= req.amount
+
+    db.add(Ledger(
+        wallet_id=wallet.wallet_id, 
+        type="debit", 
+        amount=req.amount, 
+        balance_before=old_balance, 
+        balance_after=wallet.balance, 
+        source="system", 
+        description="System Debit"
+    ))
+    db.commit()
+
+    return {"status": "ok", "balance": wallet.balance}
 
 
 # ✅ HEALTH CHECK

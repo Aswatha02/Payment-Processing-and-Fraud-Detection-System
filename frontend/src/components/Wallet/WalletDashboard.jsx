@@ -120,18 +120,52 @@ const WalletDashboard = () => {
             <div className="no-transactions"><p>No transactions found</p></div>
           ) : (
             <div className="transactions-list">
-              {transactions.map((tx) => (
+              {transactions.map((tx) => {
+                const user = JSON.parse(localStorage.getItem('user'));
+                const userId = user ? user.id : 0;
+                
+                // Determine type and description based on Transaction model
+                let txType = tx.type || 'unknown';
+                let txDesc = tx.description || 'Transaction';
+                
+                // Unified Phase 2 format handling
+                if (tx.type === 'transfer') {
+                  if (tx.sender_id === userId) {
+                    txType = 'debit';
+                    txDesc = `Transfer to ${tx.receiver_name || `User ${tx.receiver_id}`}`;
+                  } else if (tx.receiver_id === userId) {
+                    txType = 'credit';
+                    txDesc = `Transfer from ${tx.sender_name || `User ${tx.sender_id}`}`;
+                  }
+                } else if (!tx.type) {
+                  // Legacy Transaction Service format
+                  if (tx.sender_id === userId) {
+                    txType = 'debit';
+                    txDesc = `Transfer to User ${tx.receiver_id}`;
+                  } else if (tx.receiver_id === userId) {
+                    txType = 'credit';
+                    txDesc = `Transfer from User ${tx.sender_id}`;
+                  }
+                } else {
+                   // Legacy system credit/debit format (Deposits/Withdrawals)
+                   txDesc = tx.description || (txType === 'credit' ? 'Deposit' : 'Withdrawal');
+                }
+                
+                const isCredit = txType === 'credit';
+
+                return (
                 <div key={tx.id} className="tx-item">
                   <div className="tx-info">
-                    <span className="tx-type">{tx.type.toUpperCase()}</span>
-                    <span className="tx-desc">{tx.description || (tx.type === 'credit' ? 'Deposit' : 'Withdrawal')}</span>
+                    <span className="tx-type">{txType.toUpperCase()}</span>
+                    <span className="tx-desc">{txDesc}</span>
                     <span className="tx-date">{new Date(tx.timestamp).toLocaleString()}</span>
                   </div>
-                  <div className={`tx-amount ${tx.type === 'credit' ? 'positive' : 'negative'}`}>
-                    {tx.type === 'credit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                  <div className={`tx-amount ${isCredit ? 'positive' : 'negative'}`}>
+                    {isCredit ? '+' : '-'}${tx.amount.toFixed(2)}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

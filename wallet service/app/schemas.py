@@ -6,8 +6,3 @@ class WalletCreate(BaseModel):
 class TransactionRequest(BaseModel):
     user_id: int
     amount: float
-
-class TransferRequest(BaseModel):
-    user_id: int
-    recipient_id: int
-    amount: float
