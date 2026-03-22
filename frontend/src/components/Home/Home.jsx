@@ -53,9 +53,9 @@ const Home = () => {
   const getKYCStatusColor = (status) => {
     switch(status) {
       case 'VERIFIED': return '#27ae60';
-      case 'PENDING': return '#f39c12';
       case 'SUBMITTED': return '#3498db';
       case 'REJECTED': return '#e74c3c';
+      case 'NOT_SUBMITTED':
       default: return '#95a5a6';
     }
   };
@@ -63,10 +63,10 @@ const Home = () => {
   const getKYCStatusText = (status) => {
     switch(status) {
       case 'VERIFIED': return '✓ Verified';
-      case 'PENDING': return '⏳ Pending';
-      case 'SUBMITTED': return '📤 Submitted';
+      case 'SUBMITTED': return '⏳ Under Review';
       case 'REJECTED': return '✗ Rejected';
-      default: return 'Not Started';
+      case 'NOT_SUBMITTED':
+      default: return 'Not Submitted';
     }
   };
 
@@ -95,7 +95,7 @@ const Home = () => {
               <span className="kyc-status">
                 KYC Status: {getKYCStatusText(profile.kyc_status)}
               </span>
-              {profile.kyc_status === 'PENDING' && (
+              {(!profile.kyc_status || profile.kyc_status === 'NOT_SUBMITTED' || profile.kyc_status === 'REJECTED') && (
                 <button onClick={() => navigate('/kyc-submit')} className="kyc-btn">
                   Submit KYC
                 </button>
@@ -145,16 +145,10 @@ const Home = () => {
               View Profile
             </button>
             <button 
-              onClick={() => navigate('/transactions')} 
+              onClick={() => navigate('/wallet')} 
               className="home-btn primary"
             >
-              Transactions
-            </button>
-            <button 
-              onClick={() => navigate('/payment')} 
-              className="home-btn primary"
-            >
-              New Payment
+              My Wallet
             </button>
             <button 
               onClick={handleLogout} 

@@ -69,3 +69,6 @@ class RegisterRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+class AdminRegisterRequest(UserCreate):
+    admin_secret: str

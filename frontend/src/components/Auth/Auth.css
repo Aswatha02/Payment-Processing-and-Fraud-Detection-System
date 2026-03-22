@@ -156,26 +156,190 @@
   text-decoration: underline;
 }
 
-/* Profile Info */
-.profile-info {
-  margin: 1.5rem 0;
+/* -------------------------------------
+   UPGRADED PROFILE DESIGN
+---------------------------------------- */
+
+.profile-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 15px 50px rgba(0, 51, 102, 0.15);
+  width: 100%;
+  max-width: 850px; /* Widened for side-by-side layout */
+  overflow: hidden;
+  animation: fadeIn 0.5s ease;
+}
+
+.profile-header {
+  background: linear-gradient(135deg, #003366 0%, #00509e 100%);
+  color: white;
+  padding: 1.5rem 2rem 1rem; /* Reduced vertical padding */
+  text-align: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.profile-avatar {
+  width: 70px;
+  height: 70px;
+  background: #66a3ff;
+  color: white;
+  font-size: 2.2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  margin: 0; /* Removed margin auto */
+}
+
+/* Group text in header */
+.profile-header-text {
+  text-align: left;
+}
+
+.profile-header h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.6rem;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+.profile-header p {
+  color: #cce0ff;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.profile-content {
+  padding: 1.5rem 2.5rem;
+  background: #fafafa;
+}
+
+/* Container for the side-by-side columns */
+.profile-sections-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+  border: 1px solid #edf2f9;
+  margin-bottom: 0; /* Removed bottom margin since grid handles gap */
+}
+
+.profile-section h3 {
+  color: #003366;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #cce0ff;
+  text-align: left;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 }
 
 .info-row {
-  padding: 1rem;
-  border-bottom: 1px solid #cce0ff;
   display: flex;
+  flex-direction: row; /* Side by side label and value */
   justify-content: space-between;
   align-items: center;
+  background: #f8fbff;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid transparent;
 }
 
-.info-row strong {
+.info-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 122, 204, 0.08);
+  border-color: #cce0ff;
+}
+
+.info-label {
+  color: #66a3ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.info-value {
   color: #003366;
+  font-size: 0.95rem;
   font-weight: 600;
+  word-break: break-all;
+  text-align: right;
 }
 
-.info-row span {
-  color: #666;
+.kyc-status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 0.2rem;
+}
+
+.kyc-status-badge.verified { background: #d4edda; color: #155724; }
+.kyc-status-badge.pending, .kyc-status-badge.submitted { background: #fff3cd; color: #856404; }
+.kyc-status-badge.rejected { background: #f8d7da; color: #721c24; }
+.kyc-status-badge.not_submitted { background: #e2e3e5; color: #383d41; }
+
+.profile-actions {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-top: 0;
+}
+
+.profile-btn {
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.profile-btn.secondary {
+  background: #cce0ff;
+  color: #003366;
+}
+.profile-btn.secondary:hover {
+  background: #007acc;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,122,204,0.3);
+}
+
+.profile-btn.danger {
+  background: #ffebee;
+  color: #d32f2f;
+}
+.profile-btn.danger:hover {
+  background: #d32f2f;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(211,47,47,0.3);
 }
 
 /* Button Group */
@@ -195,11 +359,24 @@
     padding: 1.5rem;
   }
   
-  .auth-header h2 {
+  .auth-header h2, .profile-header h2 {
     font-size: 1.5rem;
   }
   
-  .button-group {
+  .button-group, .profile-actions {
     flex-direction: column;
+  }
+  
+  .profile-sections-wrapper {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .profile-header-text {
+    text-align: center;
   }
 }

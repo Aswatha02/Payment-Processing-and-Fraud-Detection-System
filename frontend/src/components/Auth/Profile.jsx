@@ -22,12 +22,27 @@ const Profile = () => {
       setAuthUser(authData);
       
       // Get user profile from user service
-      const profile = await userService.getCurrentProfile();
+      let profile;
+      try {
+        profile = await userService.getCurrentProfile();
+      } catch (err) {
+        if (err?.detail?.includes('not found')) {
+          // Auto-create profile if missing
+          await userService.createProfile({
+            user_id: authData.id || authData.user_id,
+            full_name: authData.username || 'User',
+            phone: null
+          });
+          profile = await userService.getCurrentProfile();
+        } else {
+          throw err;
+        }
+      }
       setUserProfile(profile);
       localStorage.setItem('user_profile', JSON.stringify(profile));
     } catch (err) {
       console.error('Error fetching profile:', err);
-      setError('Failed to load profile');
+      // Do not set fatal error, allow fallback display
     } finally {
       setLoading(false);
     }
@@ -62,14 +77,17 @@ const Profile = () => {
           <div className="profile-avatar">
             {authUser?.username?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <h2>{userProfile?.full_name || authUser?.username}</h2>
-          <p>Member since {new Date(authUser?.created_at).toLocaleDateString()}</p>
+          <div className="profile-header-text">
+            <h2>{userProfile?.full_name || authUser?.username}</h2>
+            <p>Member since {new Date(authUser?.created_at).toLocaleDateString()}</p>
+          </div>
         </div>
         
         <div className="profile-content">
           {error && <div className="error-message">{error}</div>}
           
-          <div className="profile-section">
+          <div className="profile-sections-wrapper">
+            <div className="profile-section">
             <h3>Account Information</h3>
             <div className="info-grid">
               <div className="info-row">
@@ -82,11 +100,7 @@ const Profile = () => {
               </div>
               <div className="info-row">
                 <span className="info-label">🆔 User ID</span>
-                <span className="info-value">{authUser?.id}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">⭐ Role</span>
-                <span className="info-value">{authUser?.role || 'USER'}</span>
+                <span className="info-value">{authUser?.id || authUser?.user_id}</span>
               </div>
             </div>
           </div>
@@ -104,14 +118,6 @@ const Profile = () => {
                   <span className="info-value">{userProfile.phone || 'Not set'}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">📍 Address</span>
-                  <span className="info-value">{userProfile.address || 'Not set'}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">🎂 Date of Birth</span>
-                  <span className="info-value">{userProfile.dob || 'Not set'}</span>
-                </div>
-                <div className="info-row">
                   <span className="info-label">🔒 KYC Status</span>
                   <span className={`kyc-status-badge ${userProfile.kyc_status?.toLowerCase()}`}>
                     {getKYCStatusText(userProfile.kyc_status)}
@@ -120,6 +126,7 @@ const Profile = () => {
               </div>
             </div>
           )}
+          </div>
           
           <div className="profile-actions">
             <button onClick={() => navigate('/')} className="profile-btn secondary">

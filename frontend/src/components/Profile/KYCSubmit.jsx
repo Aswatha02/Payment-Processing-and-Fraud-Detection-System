@@ -47,9 +47,10 @@ const KYCSubmit = () => {
     setError('');
     
     try {
-      // Update KYC status to SUBMITTED
-      const user = JSON.parse(localStorage.getItem('user'));
-      await userService.updateKYCStatus(user.id, 'SUBMITTED');
+      // Call submitKYC endpoint instead of the admin updateKYCStatus
+      // We'll mock the URL upload since we don't have S3 integrated
+      const dummyUrl = `https://internal-storage/${formData.document.name || 'document'}.pdf`;
+      await userService.submitKYC(dummyUrl);
       
       setSuccess('KYC documents submitted successfully! Our team will review them shortly.');
       

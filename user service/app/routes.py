@@ -7,7 +7,7 @@ import os
 from .database import get_db
 from .models import UserProfile
 from .schemas import (
-    UserCreate, UserUpdate, KYCUpdate, 
+    UserCreate, UserUpdate, KYCUpdate, KYCSubmit,
     UserProfileResponse, MessageResponse,
     UserProfileListResponse
 )
@@ -15,6 +15,25 @@ from .schemas import (
 router = APIRouter(prefix="/users", tags=["Users"])
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8000")
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+async def create_wallet_for_user(user_id: int):
+    """Call Wallet Service to create wallet for new user"""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                "http://localhost:8002/wallet",
+                json={"user_id": user_id},
+                headers={"Authorization": "system"}
+            )
+            if response.status_code != 200:
+                print(f"Warning: Wallet creation failed for user {user_id}: {response.text}")
+        except Exception as e:
+            print(f"Error calling wallet service: {e}")
+
 
 async def validate_token(token: str) -> dict:
     """Validate token and return user data including role"""
@@ -27,6 +46,7 @@ async def validate_token(token: str) -> dict:
             raise HTTPException(status_code=401, detail="Invalid token")
         return response.json()
 
+
 def check_admin_role(token_data: dict):
     """Check if user has admin role"""
     user_role = token_data.get("data", {}).get("role", "USER")
@@ -34,7 +54,11 @@ def check_admin_role(token_data: dict):
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
-# ✅ CREATE USER PROFILE - THIS ENDPOINT WAS MISSING!
+# ============================================
+# ENDPOINTS
+# ============================================
+
+# ✅ CREATE USER PROFILE
 @router.post("/", response_model=MessageResponse, status_code=201)
 async def create_user_profile(
     user: UserCreate,
@@ -65,12 +89,15 @@ async def create_user_profile(
             phone=getattr(user, 'phone', None),
             address=getattr(user, 'address', None),
             dob=getattr(user, 'dob', None),
-            kyc_status="PENDING"
+            kyc_status="NOT_SUBMITTED"
         )
         
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+        
+        # Create wallet for the user
+        await create_wallet_for_user(user.user_id)
         
         return MessageResponse(
             message="User profile created successfully",
@@ -192,6 +219,34 @@ async def update_user(
     return MessageResponse(message="User profile updated successfully")
 
 
+# ✅ SUBMIT KYC DOCS (USER only)
+@router.post("/kyc/submit", response_model=MessageResponse)
+async def submit_kyc(
+    data: KYCSubmit,
+    db: Session = Depends(get_db),
+    authorization: str = Header(...)
+):
+    """Submit user KYC documents"""
+    token = authorization.replace("Bearer ", "")
+    token_data = await validate_token(token)
+    
+    user_id = token_data.get("data", {}).get("user_id")
+    
+    user = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User profile not found")
+        
+    if user.kyc_status in ["VERIFIED", "PENDING", "SUBMITTED"]:
+        raise HTTPException(status_code=400, detail=f"Cannot submit KYC. Current status is {user.kyc_status}")
+    
+    user.kyc_document_url = data.kyc_document_url
+    user.kyc_status = "SUBMITTED"
+    user.kyc_rejection_reason = None
+    db.commit()
+    
+    return MessageResponse(message="KYC documents submitted successfully", user_id=user_id)
+
+
 # ✅ UPDATE KYC STATUS (ADMIN only)
 @router.patch("/{user_id}/kyc", response_model=MessageResponse)
 async def update_kyc(
@@ -212,6 +267,11 @@ async def update_kyc(
         raise HTTPException(status_code=404, detail="User not found")
     
     user.kyc_status = data.kyc_status.upper()
+    if user.kyc_status == "REJECTED":
+        user.kyc_rejection_reason = data.rejection_reason
+    else:
+        user.kyc_rejection_reason = None
+        
     db.commit()
     
     return MessageResponse(

@@ -3,14 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './Auth.css';
 
-// Use the same API URL pattern as authService
 const AUTH_API_URL = process.env.REACT_APP_AUTH_API_URL || 'http://localhost:8000';
 
-const Login = () => {
+const AdminRegister = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
-    password: ''
+    password: '',
+    admin_secret: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,16 +30,12 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await axios.post(`${AUTH_API_URL}/auth/login`, formData);
-      
-      if (response.data.access_token) {
-        localStorage.setItem('access_token', response.data.access_token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/');
-      }
+      await axios.post(`${AUTH_API_URL}/auth/admin/register`, formData);
+      // Automatically navigate to login after successful register
+      navigate('/admin/login');
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.detail || 'Login failed. Please try again.');
+      console.error('Admin Register error:', err);
+      setError(err.response?.data?.detail || 'Admin Registration failed. Check your secret key.');
     } finally {
       setLoading(false);
     }
@@ -46,22 +43,34 @@ const Login = () => {
 
   return (
     <div className="auth-container">
-      <div className="auth-card fade-in">
+      <div className="auth-card fade-in" style={{ borderTop: '5px solid #00509e' }}>
         <div className="auth-header">
-          <h2>Welcome Back</h2>
-          <p>Login to your account</p>
+          <h2>Core Administrator</h2>
+          <p>Register a new system admin</p>
         </div>
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email Address</label>
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              placeholder="Admin username"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Admin Email</label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="Enter your email"
+              placeholder="Admin email"
             />
           </div>
           
@@ -73,23 +82,33 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              placeholder="Enter your password"
+              placeholder="Strong password required"
             />
+          </div>
+
+          <div className="form-group">
+            <label>System Admin Secret</label>
+            <input
+              type="password"
+              name="admin_secret"
+              value={formData.admin_secret}
+              onChange={handleChange}
+              required
+              placeholder="Enter the secure ADMIN_SECRET key"
+            />
+            <span className="hint">Required for authorization</span>
           </div>
           
           {error && <div className="error-message">{error}</div>}
           
           <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Registering...' : 'Register Target Admin'}
           </button>
         </form>
         
         <div className="auth-footer">
           <p>
-            Don't have an account? <Link to="/register">Sign up</Link>
-          </p>
-          <p style={{ marginTop: '10px', fontSize: '0.8rem' }}>
-            <Link to="/admin/login" style={{ color: '#003366' }}>System Administrator Login</Link>
+            Already an administrator? <Link to="/admin/login">Login</Link>
           </p>
         </div>
       </div>
@@ -97,4 +116,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default AdminRegister;

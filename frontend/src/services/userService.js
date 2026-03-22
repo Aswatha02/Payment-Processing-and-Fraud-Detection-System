@@ -79,10 +79,23 @@ const userService = {
     }
   },
 
-  // Update KYC status (admin only)
-  updateKYCStatus: async (userId, kycStatus) => {
+  // Submit KYC documents (user)
+  submitKYC: async (documentUrl) => {
     try {
-      const response = await userAPI.patch(`/users/${userId}/kyc`, { kyc_status: kycStatus });
+      const response = await userAPI.post('/users/kyc/submit', { kyc_document_url: documentUrl });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { detail: 'Failed to submit KYC' };
+    }
+  },
+
+  // Update KYC status (admin only)
+  updateKYCStatus: async (userId, kycStatus, rejectionReason = null) => {
+    try {
+      const payload = { kyc_status: kycStatus };
+      if (rejectionReason) payload.rejection_reason = rejectionReason;
+      
+      const response = await userAPI.patch(`/users/${userId}/kyc`, payload);
       return response.data;
     } catch (error) {
       throw error.response?.data || { detail: 'Failed to update KYC status' };

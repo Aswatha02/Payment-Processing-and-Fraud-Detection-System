@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import UserAuth
-from .schemas import UserCreate, UserOut, LoginRequest, Token, TokenResponse
+from .schemas import UserCreate, UserOut, LoginRequest, Token, TokenResponse, AdminRegisterRequest
 from .auth import *
 from sqlalchemy.exc import IntegrityError
+import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -49,6 +50,65 @@ def register(req: UserCreate, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Registration failed")
+
+
+# 🛡️ ADMIN REGISTER
+@router.post("/admin/register", response_model=TokenResponse)
+def admin_register(req: AdminRegisterRequest, db: Session = Depends(get_db)):
+    ADMIN_SECRET = os.getenv("ADMIN_SECRET", "super-secret-admin-key")
+    if req.admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid admin secret")
+
+    existing_email = db.query(UserAuth).filter(UserAuth.email == req.email).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    existing_username = db.query(UserAuth).filter(UserAuth.username == req.username).first()
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    try:
+        user = UserAuth(
+            username=req.username,
+            email=req.email,
+            password_hash=hash_password(req.password),
+            role="ADMIN"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        payload = {"user_id": user.id, "role": user.role, "username": user.username}
+        return {
+            "access_token": create_access_token(payload),
+            "refresh_token": create_refresh_token(payload),
+            "token_type": "bearer",
+            "user": UserOut.model_validate(user)
+        }
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Registration failed")
+
+
+# 🛡️ ADMIN LOGIN
+@router.post("/admin/login", response_model=TokenResponse)
+def admin_login(req: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(UserAuth).filter(UserAuth.email == req.email).first()
+
+    if not user or not verify_password(req.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Access forbidden: Admins only")
+
+    payload = {"user_id": user.id, "role": user.role, "username": user.username}
+    return {
+        "access_token": create_access_token(payload),
+        "refresh_token": create_refresh_token(payload),
+        "token_type": "bearer",
+        "user": UserOut.model_validate(user)
+    }
+
 
 
 # ✅ LOGIN
@@ -102,6 +162,23 @@ def get_me(authorization: str = Header(...), db: Session = Depends(get_db)):
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    return UserOut.model_validate(user)
+
+
+# 🛡️ GET CURRENT ADMIN DEPENDENCY
+def get_current_admin(authorization: str = Header(...), db: Session = Depends(get_db)):
+    token = authorization.replace("Bearer ", "")
+    payload = decode_token(token)
+
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    user_id = payload.get("user_id")
+    user = db.query(UserAuth).filter(UserAuth.id == user_id).first()
+    
+    if not user or user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Not authorized")
     
     return UserOut.model_validate(user)
 

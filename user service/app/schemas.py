@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional
 from datetime import datetime
 import re
@@ -54,8 +54,12 @@ class UserUpdate(BaseModel):
                 raise ValueError("Phone must be 10-15 digits, optionally starting with +")
         return v
 
+class KYCSubmit(BaseModel):
+    kyc_document_url: str = Field(..., description="URL of uploaded KYC document")
+
 class KYCUpdate(BaseModel):
     kyc_status: str = Field(..., pattern=r'^(PENDING|SUBMITTED|VERIFIED|REJECTED)$')
+    rejection_reason: Optional[str] = None
     
     @field_validator("kyc_status")
     @classmethod
@@ -65,6 +69,12 @@ class KYCUpdate(BaseModel):
         if v not in valid_statuses:
             raise ValueError(f"KYC status must be one of: {', '.join(valid_statuses)}")
         return v
+    
+    @model_validator(mode='after')
+    def validate_rejection_reason(self) -> 'KYCUpdate':
+        if self.kyc_status == "REJECTED" and not self.rejection_reason:
+            raise ValueError("Rejection reason is required when status is REJECTED")
+        return self
 
 class UserProfileResponse(BaseModel):
     user_id: int
@@ -73,6 +83,8 @@ class UserProfileResponse(BaseModel):
     address: Optional[str] = None
     dob: Optional[str] = None
     kyc_status: str
+    kyc_document_url: Optional[str] = None
+    kyc_rejection_reason: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     

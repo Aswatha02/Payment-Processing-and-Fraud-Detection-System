@@ -73,16 +73,22 @@ const Register = () => {
         email: formData.email,
         password: formData.password
       });
+
+      // 2. Auto-login immediately to obtain the access_token needed for subsequent profile creation
+      await authService.login({
+        email: formData.email,
+        password: formData.password
+      });
       
-      // 2. Create user profile in user service
-      const user = authResponse.user;
+      // 3. Create user profile in user service
+      const user = authResponse.user || authService.getCurrentUser();
       await userService.createProfile({
-        user_id: user.id,
+        user_id: user.id || user.user_id,
         full_name: formData.full_name,
         phone: formData.phone || null
       });
       
-      // 3. Navigate to home
+      // 4. Navigate to home
       navigate('/');
     } catch (err) {
       setErrors({ submit: err.detail || 'Registration failed' });

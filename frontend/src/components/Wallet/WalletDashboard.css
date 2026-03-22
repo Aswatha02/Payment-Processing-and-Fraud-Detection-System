@@ -1,0 +1,161 @@
+.wallet-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: #cce0ff;
+}
+
+.wallet-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #cce0ff;
+}
+
+.wallet-header h2 {
+  color: #003366;
+  font-size: 1.8rem;
+}
+
+.balance-section {
+  text-align: center;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #003366 0%, #00509e 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  color: white;
+}
+
+.balance-section h3 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #66a3ff;
+}
+
+.balance-amount {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.wallet-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #007acc;
+  color: white;
+  flex: 1;
+}
+
+.wallet-btn:hover {
+  background: #66a3ff;
+  transform: translateY(-2px);
+}
+
+.wallet-btn.secondary {
+  background: #cce0ff;
+  color: #003366;
+}
+
+.wallet-btn.secondary:hover {
+  background: #66a3ff;
+  color: white;
+}
+
+.transactions-section h3 {
+  color: #003366;
+  margin-bottom: 1rem;
+}
+
+.tx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #cce0ff;
+}
+
+.tx-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-type {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #00509e;
+  margin-bottom: 0.25rem;
+}
+
+.tx-desc {
+  font-size: 1rem;
+  color: #333;
+}
+
+.tx-date {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.tx-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.tx-amount.positive {
+  color: #27ae60;
+}
+
+.tx-amount.negative {
+  color: #e74c3c;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 51, 102, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-content h3 {
+  color: #003366;
+  margin-bottom: 1.5rem;
+}

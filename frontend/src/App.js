@@ -5,18 +5,33 @@ import Register from './components/Auth/Register';
 import Profile from './components/Auth/Profile';
 import Home from './components/Home/Home';
 import KYCSubmit from './components/Profile/KYCSubmit';
-import Transactions from './components/Transactions/Transactions';
-import Payment from './components/Payment/Payment';
+import WalletDashboard from './components/Wallet/WalletDashboard';
 import AdminUsers from './components/Admin/AdminUsers';
 import AdminKYC from './components/Admin/AdminKYC';
+import AdminLogin from './components/Auth/AdminLogin';
+import AdminRegister from './components/Auth/AdminRegister';
 import './App.css';
 
 const isAuthenticated = () => {
   return !!localStorage.getItem('access_token');
 };
 
+const isAdmin = () => {
+  if (!isAuthenticated()) return false;
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user.role === 'ADMIN';
+  } catch (e) {
+    return false;
+  }
+};
+
 const PrivateRoute = ({ children }) => {
   return isAuthenticated() ? children : <Navigate to="/login" />;
+};
+
+const AdminRoute = ({ children }) => {
+  return isAdmin() ? children : <Navigate to="/" />;
 };
 
 function App() {
@@ -33,13 +48,14 @@ function App() {
           {/* KYC Routes */}
           <Route path="/kyc-submit" element={<PrivateRoute><KYCSubmit /></PrivateRoute>} />
           
-          {/* Payment Routes */}
-          <Route path="/transactions" element={<PrivateRoute><Transactions /></PrivateRoute>} />
-          <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
+          {/* Wallet Dashboard Route */}
+          <Route path="/wallet" element={<PrivateRoute><WalletDashboard /></PrivateRoute>} />
           
           {/* Admin Routes */}
-          <Route path="/admin/users" element={<PrivateRoute><AdminUsers /></PrivateRoute>} />
-          <Route path="/admin/kyc" element={<PrivateRoute><AdminKYC /></PrivateRoute>} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
+          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+          <Route path="/admin/kyc" element={<AdminRoute><AdminKYC /></AdminRoute>} />
           
           {/* Home */}
           <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />

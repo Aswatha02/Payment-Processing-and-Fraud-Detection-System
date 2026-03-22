@@ -32,7 +32,13 @@ const AdminKYC = () => {
 
   const handleReview = async (userId, action) => {
     try {
-      await userService.updateKYCStatus(userId, action);
+      let reason = null;
+      if (action === 'REJECTED') {
+        reason = window.prompt("Please provide a reason for rejecting this KYC application:");
+        if (!reason) return; // User cancelled prompt
+      }
+      
+      await userService.updateKYCStatus(userId, action, reason);
       // Refresh list
       fetchSubmissions();
       setSelectedDoc(null);
