@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Transaction, Wallet, Ledger
 from .schemas import TransferRequest
-from .service import debit_wallet, credit_wallet, get_user_name
+from .service import debit_wallet, credit_wallet, get_user_name, check_fraud
 import httpx
 import os
 
@@ -61,6 +61,13 @@ async def transfer_money(
     db.add(transaction)
     db.commit()
     db.refresh(transaction)
+
+    # Check for fraud
+    fraud_result = await check_fraud(req.sender_id, req.amount)
+    if fraud_result.get("status") == "FLAGGED":
+        transaction.status = "FAILED"
+        db.commit()
+        raise HTTPException(status_code=400, detail="Fraud detected")
 
     try:
         # Debit sender wallet

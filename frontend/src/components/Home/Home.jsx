@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../../services/authService';
 import userService from '../../services/userService';
+import walletService from '../../services/walletService';
+import fraudService from '../../services/fraudService';
 import './Home.css';
 
 const Home = () => {
@@ -10,6 +12,14 @@ const Home = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
+  
+  // Stats state
+  const [stats, setStats] = useState({
+    totalTransactions: 0,
+    successfulPayments: 0,
+    flaggedTransactions: 0,
+    fraudRiskScore: 0
+  });
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -37,8 +47,31 @@ const Home = () => {
         // No profile yet, redirect to profile completion
         if (err.detail === 'User profile not found') {
           navigate('/complete-profile');
+          return;
         }
       }
+
+      if (currentUser && currentUser.id) {
+        // Fetch transaction and fraud stats
+        try {
+          const transResponse = await walletService.getTransactions(currentUser.id, 0, 100);
+          const transactions = transResponse.transactions || [];
+          
+          const successful = transactions.filter(t => t.status === 'COMPLETED').length;
+          
+          const fraudData = await fraudService.getUserStats(currentUser.id);
+          
+          setStats({
+            totalTransactions: transactions.length, // or transResponse.total if available
+            successfulPayments: successful,
+            flaggedTransactions: fraudData.flagged_transactions || 0,
+            fraudRiskScore: fraudData.current_risk_score || 0
+          });
+        } catch (statsErr) {
+          console.error('Error fetching stats:', statsErr);
+        }
+      }
+
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -108,7 +141,7 @@ const Home = () => {
               <div className="stat-icon">💰</div>
               <div className="stat-info">
                 <h3>Total Transactions</h3>
-                <p>0</p>
+                <p>{stats.totalTransactions}</p>
               </div>
             </div>
             
@@ -116,7 +149,7 @@ const Home = () => {
               <div className="stat-icon">✅</div>
               <div className="stat-info">
                 <h3>Successful Payments</h3>
-                <p>0</p>
+                <p>{stats.successfulPayments}</p>
               </div>
             </div>
             
@@ -124,7 +157,7 @@ const Home = () => {
               <div className="stat-icon">⚠️</div>
               <div className="stat-info">
                 <h3>Flagged Transactions</h3>
-                <p>0</p>
+                <p>{stats.flaggedTransactions}</p>
               </div>
             </div>
             
@@ -132,7 +165,7 @@ const Home = () => {
               <div className="stat-icon">📊</div>
               <div className="stat-info">
                 <h3>Fraud Risk Score</h3>
-                <p>Low</p>
+                <p>{stats.fraudRiskScore}</p>
               </div>
             </div>
           </div>

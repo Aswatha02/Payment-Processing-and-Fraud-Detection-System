@@ -59,3 +59,24 @@ async def get_user_name(user_id: int) -> str:
             pass
             
     return f"User {user_id}"
+
+FRAUD_URL = os.getenv("FRAUD_SERVICE_URL", "http://localhost:8004")
+
+async def check_fraud(user_id: int, amount: float) -> dict:
+    """Evaluate fraud risk using Fraud Service"""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{FRAUD_URL}/fraud/analyze",
+                json={"user_id": user_id, "amount": amount},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception:
+            # If fraud service is down, maybe we shouldn't block transactions completely,
+            # or maybe we should. Let's return a safe default or log error.
+            # Assuming returning APPROVED for now if service is unreachable.
+            return {"status": "APPROVED", "risk_score": 0, "reasons": ["Fraud service unreachable"]}
+            
+    return {"status": "APPROVED", "risk_score": 0, "reasons": ["Default fallback"]}
