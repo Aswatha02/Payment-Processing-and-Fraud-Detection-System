@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from datetime import datetime
 from .database import Base
@@ -11,4 +11,5 @@ class UserAuth(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(String, default="USER")
+    is_suspended = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -82,6 +82,26 @@ const walletService = {
     } catch (error) {
       throw error.response?.data || { detail: 'Transfer failed' };
     }
+  },
+
+  // Get dashboard stats
+  getDashboardStats: async (userId) => {
+    try {
+      const response = await transactionAPI.get(`/transactions/${userId}/dashboard`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { detail: 'Failed to fetch dashboard stats' };
+    }
+  },
+
+  // Get admin flagged transactions
+  getAdminFlaggedTransactions: async () => {
+    try {
+      const response = await transactionAPI.get('/transactions/admin/flagged');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { detail: 'Failed to fetch flagged transactions' };
+    }
   }
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import userService from '../../services/userService';
 import authService from '../../services/authService';
+import fraudService from '../../services/fraudService';
 import './Admin.css';
 
 const AdminUsers = () => {
@@ -41,6 +42,26 @@ const AdminUsers = () => {
     }
   };
 
+  const handleSuspend = async (userId, suspend) => {
+    try {
+      if (window.confirm(`Are you sure you want to ${suspend ? 'suspend' : 'unsuspend'} this user?`)) {
+        await userService.toggleSuspend(userId, suspend);
+        fetchUsers();
+      }
+    } catch (err) {
+      alert('Failed to update suspension status: ' + (err.detail || err.message));
+    }
+  };
+
+  const handleViewFraud = async (userId) => {
+    try {
+      const stats = await fraudService.getUserStats(userId);
+      alert(`Fraud Stats for User ${userId}:\nFlagged Transactions: ${stats.flagged_transactions}\nCurrent Risk Score: ${stats.current_risk_score}`);
+    } catch (err) {
+      alert('Failed to fetch fraud stats: ' + (err.detail || err.message));
+    }
+  };
+
   if (loading) {
     return (
       <div className="admin-container">
@@ -69,6 +90,7 @@ const AdminUsers = () => {
                 <th>Full Name</th>
                 <th>Phone</th>
                 <th>KYC Status</th>
+                <th>Account Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -79,8 +101,17 @@ const AdminUsers = () => {
                   <td>{user.full_name}</td>
                   <td>{user.phone || '—'}</td>
                   <td>
-                    <span className={`kyc-badge ${user.kyc_status.toLowerCase()}`}>
-                      {user.kyc_status}
+                    <span className={`kyc-badge ${user.kyc_status?.toLowerCase() || 'not_submitted'}`}>
+                      {user.kyc_status || 'NOT_SUBMITTED'}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold',
+                      backgroundColor: user.is_suspended ? '#ffebee' : '#e8f5e9',
+                      color: user.is_suspended ? '#c62828' : '#2e7d32'
+                    }}>
+                      {user.is_suspended ? 'Suspended' : 'Active'}
                     </span>
                   </td>
                   <td className="actions">
@@ -100,6 +131,20 @@ const AdminUsers = () => {
                         </button>
                       </>
                     )}
+                    <button 
+                      onClick={() => handleSuspend(user.user_id, !user.is_suspended)}
+                      className={`action-btn ${user.is_suspended ? 'approve' : 'reject'}`}
+                      style={{marginLeft: '0.5rem'}}
+                    >
+                      {user.is_suspended ? 'Unsuspend' : 'Suspend'}
+                    </button>
+                    <button 
+                      onClick={() => handleViewFraud(user.user_id)}
+                      className="action-btn"
+                      style={{marginLeft: '0.5rem', backgroundColor: '#f39c12', color: 'white'}}
+                    >
+                      Fraud Stats
+                    </button>
                   </td>
                 </tr>
               ))}

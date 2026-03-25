@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -13,5 +13,6 @@ class UserProfile(Base):
     kyc_status = Column(String(20), default="NOT_SUBMITTED")
     kyc_document_url = Column(String(255), nullable=True)
     kyc_rejection_reason = Column(String(255), nullable=True)
+    is_suspended = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

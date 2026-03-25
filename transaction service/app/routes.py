@@ -41,7 +41,11 @@ async def transfer_money(
     """Transfer money to another user"""
     token_data = await validate_user_token(authorization)
     token_user_id = token_data.get("user_id")
+    token_role = token_data.get("role", "USER")
     
+    if token_role == "ADMIN":
+        raise HTTPException(status_code=403, detail="Admins cannot perform transactions")
+        
     if token_user_id != req.sender_id:
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -65,9 +69,9 @@ async def transfer_money(
     # Check for fraud
     fraud_result = await check_fraud(req.sender_id, req.amount)
     if fraud_result.get("status") == "FLAGGED":
-        transaction.status = "FAILED"
+        transaction.status = "FLAGGED"
         db.commit()
-        raise HTTPException(status_code=400, detail="Fraud detected")
+        raise HTTPException(status_code=400, detail="Transaction flagged for suspicious activity")
 
     try:
         # Debit sender wallet
@@ -129,6 +133,10 @@ async def get_transaction_history(
     unified_history = []
     
     for t in txs:
+        # Hide FLAGGED transactions from regular users
+        if t.status == "FLAGGED" and token_data.get("role") != "ADMIN":
+            continue
+            
         unified_history.append({
             "id": f"tx_{t.id}",
             "type": "transfer",
@@ -183,6 +191,71 @@ async def get_transaction_history(
         "skip": skip,
         "limit": limit
     }
+
+@router.get("/{user_id}/dashboard")
+async def get_user_dashboard(
+    user_id: int,
+    authorization: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    """Get dashboard stats for a user"""
+    token_data = await validate_user_token(authorization)
+    token_user_id = token_data.get("user_id")
+    
+    if token_user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    if token_data.get("role") == "ADMIN":
+        raise HTTPException(status_code=403, detail="Admins do not have financial dashboards")
+
+    # Fetch total transactions (excluding FLAGGED)
+    total_txs = db.query(Transaction).filter(
+        ((Transaction.sender_id == user_id) | (Transaction.receiver_id == user_id)),
+        Transaction.status != "FLAGGED"
+    ).count()
+
+    # Fetch successful transactions
+    success_txs = db.query(Transaction).filter(
+        ((Transaction.sender_id == user_id) | (Transaction.receiver_id == user_id)),
+        Transaction.status == "COMPLETED"
+    ).count()
+    
+    # Let's get balance from Wallet
+    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
+    balance = wallet.balance if wallet else 0
+
+    return {
+        "total_transactions": total_txs,
+        "successful_transactions": success_txs,
+        "wallet_balance": balance
+    }
+
+@router.get("/admin/flagged")
+async def get_flagged_transactions(
+    authorization: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    """Get all flagged transactions for admins"""
+    token_data = await validate_user_token(authorization)
+    
+    if token_data.get("role") != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    txs = db.query(Transaction).filter(Transaction.status == "FLAGGED").order_by(Transaction.timestamp.desc()).all()
+    
+    result = []
+    for t in txs:
+        result.append({
+            "id": t.id,
+            "amount": t.amount,
+            "status": t.status,
+            "timestamp": t.timestamp,
+            "sender_id": t.sender_id,
+            "receiver_id": t.receiver_id
+        })
+        
+    return {"transactions": result}
+
 
 @router.get("/health")
 async def health_check():

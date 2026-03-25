@@ -304,6 +304,43 @@ async def delete_user(
     return MessageResponse(message="User profile deleted successfully")
 
 
+# ✅ SUSPEND/UNSUSPEND USER (ADMIN only)
+@router.patch("/{user_id}/suspend", response_model=MessageResponse)
+async def toggle_suspend_user(
+    user_id: int,
+    suspend: bool,
+    db: Session = Depends(get_db),
+    authorization: str = Header(...)
+):
+    """Suspend or unsuspend a user - ADMIN ONLY"""
+    token = authorization.replace("Bearer ", "")
+    token_data = await validate_token(token)
+    
+    check_admin_role(token_data)
+    
+    user = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.is_suspended = suspend
+    db.commit()
+    
+    # Also forward to auth service to block login
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.patch(
+                f"{AUTH_SERVICE_URL}/auth/admin/suspend/{user_id}?suspend={str(suspend).lower()}",
+                headers={"Authorization": authorization}
+            )
+            if response.status_code not in (200, 400, 404):
+                print(f"Warning: Failed to sync suspension with auth service: {response.text}")
+        except Exception as e:
+            print(f"Error calling auth service for suspension: {e}")
+            
+    status_str = "suspended" if suspend else "unsuspended"
+    return MessageResponse(message=f"User {status_str} successfully", user_id=user_id)
+
+
 # ✅ HEALTH CHECK
 @router.get("/health")
 async def health_check():

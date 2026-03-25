@@ -85,6 +85,7 @@ class UserProfileResponse(BaseModel):
     kyc_status: str
     kyc_document_url: Optional[str] = None
     kyc_rejection_reason: Optional[str] = None
+    is_suspended: Optional[bool] = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     

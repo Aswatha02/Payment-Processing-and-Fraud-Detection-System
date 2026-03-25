@@ -6,14 +6,14 @@ const fraudAPI = axios.create({
   baseURL: FRAUD_API_URL,
 });
 
-// Optional: Add request interceptor if fraud service ever needs auth tokens
-// fraudAPI.interceptors.request.use((config) => {
-//   const token = localStorage.getItem('access_token');
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return config;
-// });
+// Add request interceptor since fraud service now needs admin tokens
+fraudAPI.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 const fraudService = {
   getUserStats: async (userId) => {

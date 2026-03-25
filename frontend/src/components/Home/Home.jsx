@@ -17,8 +17,7 @@ const Home = () => {
   const [stats, setStats] = useState({
     totalTransactions: 0,
     successfulPayments: 0,
-    flaggedTransactions: 0,
-    fraudRiskScore: 0
+    walletBalance: 0
   });
 
   const getGreeting = () => {
@@ -52,23 +51,18 @@ const Home = () => {
       }
 
       if (currentUser && currentUser.id) {
-        // Fetch transaction and fraud stats
-        try {
-          const transResponse = await walletService.getTransactions(currentUser.id, 0, 100);
-          const transactions = transResponse.transactions || [];
-          
-          const successful = transactions.filter(t => t.status === 'COMPLETED').length;
-          
-          const fraudData = await fraudService.getUserStats(currentUser.id);
-          
-          setStats({
-            totalTransactions: transactions.length, // or transResponse.total if available
-            successfulPayments: successful,
-            flaggedTransactions: fraudData.flagged_transactions || 0,
-            fraudRiskScore: fraudData.current_risk_score || 0
-          });
-        } catch (statsErr) {
-          console.error('Error fetching stats:', statsErr);
+        // Fetch stats if user is not admin
+        if (!authService.isAdmin()) {
+          try {
+            const dashboardData = await walletService.getDashboardStats(currentUser.id);
+            setStats({
+              totalTransactions: dashboardData.total_transactions || 0,
+              successfulPayments: dashboardData.successful_transactions || 0,
+              walletBalance: dashboardData.wallet_balance || 0
+            });
+          } catch (statsErr) {
+            console.error('Error fetching dashboard stats:', statsErr);
+          }
         }
       }
 
@@ -136,53 +130,58 @@ const Home = () => {
             </div>
           )}
           
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">💰</div>
-              <div className="stat-info">
-                <h3>Total Transactions</h3>
-                <p>{stats.totalTransactions}</p>
+          {!authService.isAdmin() && (
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon">💰</div>
+                <div className="stat-info">
+                  <h3>Total Transactions</h3>
+                  <p>{stats.totalTransactions}</p>
+                </div>
+              </div>
+              
+              <div className="stat-card">
+                <div className="stat-icon">✅</div>
+                <div className="stat-info">
+                  <h3>Successful Payments</h3>
+                  <p>{stats.successfulPayments}</p>
+                </div>
+              </div>
+              
+              <div className="stat-card">
+                <div className="stat-icon">📈</div>
+                <div className="stat-info">
+                  <h3>Wallet Balance</h3>
+                  <p>${parseFloat(stats.walletBalance || 0).toFixed(2)}</p>
+                </div>
               </div>
             </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">✅</div>
-              <div className="stat-info">
-                <h3>Successful Payments</h3>
-                <p>{stats.successfulPayments}</p>
-              </div>
+          )}
+
+          {authService.isAdmin() && (
+            <div className="admin-dashboard-welcome" style={{margin: '2rem 0', padding: '1.5rem', backgroundColor: 'rgba(52, 152, 219, 0.1)', borderRadius: '10px', borderLeft: '4px solid #3498db'}}>
+              <h3 style={{color: '#2980b9', marginBottom: '0.5rem'}}>System Administrator Dashboard</h3>
+              <p style={{color: '#34495e'}}>You have full access to monitor fraud, manage given user roles, and oversee all system operations.</p>
             </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">⚠️</div>
-              <div className="stat-info">
-                <h3>Flagged Transactions</h3>
-                <p>{stats.flaggedTransactions}</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">📊</div>
-              <div className="stat-info">
-                <h3>Fraud Risk Score</h3>
-                <p>{stats.fraudRiskScore}</p>
-              </div>
-            </div>
-          </div>
+          )}
           
           <div className="action-buttons">
-            <button 
-              onClick={() => navigate('/profile')} 
-              className="home-btn primary"
-            >
-              View Profile
-            </button>
-            <button 
-              onClick={() => navigate('/wallet')} 
-              className="home-btn primary"
-            >
-              My Wallet
-            </button>
+            {!authService.isAdmin() && (
+              <>
+                <button 
+                  onClick={() => navigate('/profile')} 
+                  className="home-btn primary"
+                >
+                  View Profile
+                </button>
+                <button 
+                  onClick={() => navigate('/wallet')} 
+                  className="home-btn primary"
+                >
+                  My Wallet
+                </button>
+              </>
+            )}
             <button 
               onClick={handleLogout} 
               className="home-btn logout"

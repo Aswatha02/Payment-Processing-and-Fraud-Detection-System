@@ -110,6 +110,16 @@ const userService = {
     } catch (error) {
       throw error.response?.data || { detail: 'Failed to get full user info' };
     }
+  },
+
+  // Toggle user suspension
+  toggleSuspend: async (userId, suspend) => {
+    try {
+      const response = await userAPI.patch(`/users/${userId}/suspend?suspend=${suspend}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { detail: 'Failed to update suspension status' };
+    }
   }
 };
 

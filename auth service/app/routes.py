@@ -101,6 +101,9 @@ def admin_login(req: LoginRequest, db: Session = Depends(get_db)):
     if user.role != "ADMIN":
         raise HTTPException(status_code=403, detail="Access forbidden: Admins only")
 
+    if getattr(user, "is_suspended", False):
+        raise HTTPException(status_code=403, detail="Account suspended")
+
     payload = {"user_id": user.id, "role": user.role, "username": user.username}
     return {
         "access_token": create_access_token(payload),
@@ -118,6 +121,9 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if getattr(user, "is_suspended", False):
+        raise HTTPException(status_code=403, detail="Account suspended")
 
     payload = {"user_id": user.id, "role": user.role, "username": user.username}
     access_token = create_access_token(payload)
@@ -232,3 +238,25 @@ def check_username(username: str, db: Session = Depends(get_db)):
 def check_email(email: str, db: Session = Depends(get_db)):
     user = db.query(UserAuth).filter(UserAuth.email == email).first()
     return {"available": user is None}
+
+
+# 🛡️ ADMIN SUSPEND/UNSUSPEND USER
+@router.patch("/admin/suspend/{user_id}")
+def toggle_user_suspension(
+    user_id: int, 
+    suspend: bool, 
+    db: Session = Depends(get_db), 
+    admin=Depends(get_current_admin)
+):
+    user = db.query(UserAuth).filter(UserAuth.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.role == "ADMIN":
+        raise HTTPException(status_code=400, detail="Cannot suspend an admin account")
+        
+    user.is_suspended = suspend
+    db.commit()
+    
+    status = "suspended" if suspend else "unsuspended"
+    return {"message": f"User {status} successfully"}

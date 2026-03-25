@@ -41,6 +41,7 @@ class UserOut(BaseModel):
     username: str
     email: EmailStr
     role: Optional[str] = "USER"  # Add role field
+    is_suspended: Optional[bool] = False
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
