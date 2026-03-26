@@ -74,15 +74,15 @@ const AdminUsers = () => {
     <div className="admin-container">
       <div className="admin-card">
         <div className="admin-header">
-          <h2>User Management</h2>
-          <div>
-            <button onClick={() => navigate('/admin/audits')} className="back-btn" style={{marginRight: '1rem', backgroundColor: '#3498db', color: 'white'}}>
-              View Audits
-            </button>
-            <button onClick={() => navigate('/')} className="back-btn">
-              Back to Home
-            </button>
-          </div>
+          <h2>Admin Dashboard</h2>
+          <button onClick={() => navigate('/')} className="back-btn">
+            Back to Home
+          </button>
+        </div>
+        <div className="admin-tabs">
+          <button className="tab-btn active" onClick={() => navigate('/admin/users')}>Manage Users</button>
+          <button className="tab-btn" onClick={() => navigate('/admin/kyc')}>Review KYC</button>
+          <button className="tab-btn" onClick={() => navigate('/admin/audits')}>View Audits</button>
         </div>
         
         {error && <div className="error-message">{error}</div>}

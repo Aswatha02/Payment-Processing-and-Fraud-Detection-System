@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import walletService from '../../services/walletService';
+import NotificationBell from '../Notifications/NotificationBell';
 import './WalletDashboard.css';
 
 const WalletDashboard = () => {
@@ -92,9 +93,12 @@ const WalletDashboard = () => {
         
         <div className="wallet-header">
           <h2>My Wallet</h2>
-          <button onClick={() => navigate('/')} className="back-btn">
-            Back to Home
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <NotificationBell />
+            <button onClick={() => navigate('/')} className="back-btn">
+              Back to Home
+            </button>
+          </div>
         </div>
         
         <div className="balance-section">

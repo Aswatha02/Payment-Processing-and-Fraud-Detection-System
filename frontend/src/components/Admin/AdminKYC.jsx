@@ -59,10 +59,15 @@ const AdminKYC = () => {
     <div className="admin-container">
       <div className="admin-card">
         <div className="admin-header">
-          <h2>KYC Review Queue</h2>
+          <h2>Admin Dashboard</h2>
           <button onClick={() => navigate('/')} className="back-btn">
             Back to Home
           </button>
+        </div>
+        <div className="admin-tabs">
+          <button className="tab-btn" onClick={() => navigate('/admin/users')}>Manage Users</button>
+          <button className="tab-btn active" onClick={() => navigate('/admin/kyc')}>Review KYC</button>
+          <button className="tab-btn" onClick={() => navigate('/admin/audits')}>View Audits</button>
         </div>
         
         {submissions.length === 0 ? (

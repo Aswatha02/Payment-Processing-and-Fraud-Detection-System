@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from typing import Optional
 import httpx
 from .audit import log_audit
+from .notification import send_notification
 import os
 from .database import get_db
 from .models import UserProfile
@@ -360,6 +361,9 @@ async def toggle_suspend_user(
     
     admin_id = token_data.get("data", {}).get("user_id", None)
     background_tasks.add_task(log_audit, "User Service", "User Suspension Toggled", admin_id, f"Admin {status_str} User {user_id}")
+    
+    if suspend:
+        background_tasks.add_task(send_notification, user_id, "Your account is blocked", "alert")
     
     return MessageResponse(message=f"User {status_str} successfully", user_id=user_id)
 

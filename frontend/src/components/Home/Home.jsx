@@ -4,6 +4,7 @@ import authService from '../../services/authService';
 import userService from '../../services/userService';
 import walletService from '../../services/walletService';
 import fraudService from '../../services/fraudService';
+import NotificationBell from '../Notifications/NotificationBell';
 import './Home.css';
 
 const Home = () => {
@@ -109,8 +110,9 @@ const Home = () => {
     <div className="home-container">
       <div className="home-content fade-in">
         <div className="welcome-card">
-          <h1 className="welcome-title">
+          <h1 className="welcome-title" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             {greeting}, {profile?.full_name || user?.username || 'User'}! 👋
+            <NotificationBell />
           </h1>
           <p className="welcome-subtitle">
             Welcome to Payment Processing & Fraud Detection System
@@ -200,6 +202,9 @@ const Home = () => {
                 </button>
                 <button onClick={() => navigate('/admin/kyc')} className="admin-btn">
                   Review KYC
+                </button>
+                <button onClick={() => navigate('/admin/audits')} className="admin-btn">
+                  View Audits
                 </button>
               </div>
             </div>

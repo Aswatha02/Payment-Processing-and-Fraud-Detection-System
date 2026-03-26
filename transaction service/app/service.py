@@ -62,6 +62,23 @@ async def get_user_name(user_id: int) -> str:
 
 FRAUD_URL = os.getenv("FRAUD_SERVICE_URL", "http://localhost:8004")
 
+NOTIFICATION_URL = os.getenv("NOTIFICATION_SERVICE_URL", "http://localhost:8006")
+import requests
+
+def send_notification(user_id, message, type):
+    try:
+        requests.post(
+            f"{NOTIFICATION_URL}/notifications/",
+            json={
+                "user_id": user_id,
+                "message": message,
+                "type": type
+            },
+            timeout=2.0
+        )
+    except Exception as e:
+        print(f"Failed to send notification to User {user_id}: {e}")
+
 async def check_fraud(user_id: int, amount: float) -> dict:
     """Evaluate fraud risk using Fraud Service"""
     async with httpx.AsyncClient() as client:

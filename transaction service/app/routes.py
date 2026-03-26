@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Transaction, Wallet, Ledger
 from .schemas import TransferRequest
-from .service import debit_wallet, credit_wallet, get_user_name, check_fraud
+from .service import debit_wallet, credit_wallet, get_user_name, check_fraud, send_notification
 from .audit import log_audit
 import httpx
 import os
@@ -74,6 +74,7 @@ async def transfer_money(
         transaction.status = "FLAGGED"
         db.commit()
         background_tasks.add_task(log_audit, "Transaction Service", "Transaction Flagged", req.sender_id, f"Transfer of {req.amount} to {req.receiver_id} flagged for fraud")
+        background_tasks.add_task(send_notification, req.sender_id, "Transaction blocked due to fraud detection", "fraud")
         raise HTTPException(status_code=400, detail="Transaction flagged for suspicious activity")
 
     try:
@@ -98,6 +99,7 @@ async def transfer_money(
     db.commit()
 
     background_tasks.add_task(log_audit, "Transaction Service", "Transaction Completed", req.sender_id, f"Transferred {req.amount} to {req.receiver_id} (TX ID: {transaction.id})")
+    background_tasks.add_task(send_notification, req.sender_id, "Transfer successful", "success")
 
     return {
         "message": "Transfer successful",
