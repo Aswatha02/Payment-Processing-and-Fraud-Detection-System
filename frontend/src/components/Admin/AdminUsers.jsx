@@ -75,9 +75,14 @@ const AdminUsers = () => {
       <div className="admin-card">
         <div className="admin-header">
           <h2>User Management</h2>
-          <button onClick={() => navigate('/')} className="back-btn">
-            Back to Home
-          </button>
+          <div>
+            <button onClick={() => navigate('/admin/audits')} className="back-btn" style={{marginRight: '1rem', backgroundColor: '#3498db', color: 'white'}}>
+              View Audits
+            </button>
+            <button onClick={() => navigate('/')} className="back-btn">
+              Back to Home
+            </button>
+          </div>
         </div>
         
         {error && <div className="error-message">{error}</div>}

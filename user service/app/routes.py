@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import Optional
 import httpx
+from .audit import log_audit
 import os
 from .database import get_db
 from .models import UserProfile
@@ -62,6 +63,7 @@ def check_admin_role(token_data: dict):
 @router.post("/", response_model=MessageResponse, status_code=201)
 async def create_user_profile(
     user: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     authorization: str = Header(...)
 ):
@@ -98,6 +100,8 @@ async def create_user_profile(
         
         # Create wallet for the user
         await create_wallet_for_user(user.user_id)
+        
+        background_tasks.add_task(log_audit, "User Service", "User Profile Created", user.user_id, f"Created profile for {user.full_name}")
         
         return MessageResponse(
             message="User profile created successfully",
@@ -191,6 +195,7 @@ async def get_user(
 async def update_user(
     user_id: int,
     data: UserUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     authorization: str = Header(...)
 ):
@@ -216,6 +221,8 @@ async def update_user(
     db.commit()
     db.refresh(user)
     
+    background_tasks.add_task(log_audit, "User Service", "User Profile Updated", user_id, "Profile updated")
+    
     return MessageResponse(message="User profile updated successfully")
 
 
@@ -223,6 +230,7 @@ async def update_user(
 @router.post("/kyc/submit", response_model=MessageResponse)
 async def submit_kyc(
     data: KYCSubmit,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     authorization: str = Header(...)
 ):
@@ -244,6 +252,8 @@ async def submit_kyc(
     user.kyc_rejection_reason = None
     db.commit()
     
+    background_tasks.add_task(log_audit, "User Service", "KYC Submitted", user_id, "User submitted KYC documents")
+    
     return MessageResponse(message="KYC documents submitted successfully", user_id=user_id)
 
 
@@ -252,6 +262,7 @@ async def submit_kyc(
 async def update_kyc(
     user_id: int,
     data: KYCUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     authorization: str = Header(...)
 ):
@@ -274,6 +285,9 @@ async def update_kyc(
         
     db.commit()
     
+    admin_id = token_data.get("data", {}).get("user_id", None)
+    background_tasks.add_task(log_audit, "User Service", "KYC Status Updated", admin_id, f"Admin updated User {user_id} KYC to {user.kyc_status}")
+    
     return MessageResponse(
         message=f"KYC status updated to {user.kyc_status}",
         user_id=user_id
@@ -284,6 +298,7 @@ async def update_kyc(
 @router.delete("/{user_id}", response_model=MessageResponse)
 async def delete_user(
     user_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     authorization: str = Header(...)
 ):
@@ -301,6 +316,9 @@ async def delete_user(
     db.delete(user)
     db.commit()
     
+    admin_id = token_data.get("data", {}).get("user_id", None)
+    background_tasks.add_task(log_audit, "User Service", "User Profile Deleted", admin_id, f"Admin deleted User {user_id} profile")
+    
     return MessageResponse(message="User profile deleted successfully")
 
 
@@ -309,6 +327,7 @@ async def delete_user(
 async def toggle_suspend_user(
     user_id: int,
     suspend: bool,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     authorization: str = Header(...)
 ):
@@ -338,6 +357,10 @@ async def toggle_suspend_user(
             print(f"Error calling auth service for suspension: {e}")
             
     status_str = "suspended" if suspend else "unsuspended"
+    
+    admin_id = token_data.get("data", {}).get("user_id", None)
+    background_tasks.add_task(log_audit, "User Service", "User Suspension Toggled", admin_id, f"Admin {status_str} User {user_id}")
+    
     return MessageResponse(message=f"User {status_str} successfully", user_id=user_id)
 
 

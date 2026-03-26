@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import UserAuth
 from .schemas import UserCreate, UserOut, LoginRequest, Token, TokenResponse, AdminRegisterRequest
 from .auth import *
 from sqlalchemy.exc import IntegrityError
+from .audit import log_audit
 import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ✅ REGISTER
 @router.post("/register", response_model=TokenResponse)
-def register(req: UserCreate, db: Session = Depends(get_db)):
+def register(req: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Check if email already exists
     existing_email = db.query(UserAuth).filter(UserAuth.email == req.email).first()
     if existing_email:
@@ -41,6 +42,7 @@ def register(req: UserCreate, db: Session = Depends(get_db)):
         refresh_token = create_refresh_token(payload)
         
         # Return both tokens
+        background_tasks.add_task(log_audit, "Auth Service", "User Registered", user.id, f"User {user.username} registered with role {user.role}")
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -54,7 +56,7 @@ def register(req: UserCreate, db: Session = Depends(get_db)):
 
 # 🛡️ ADMIN REGISTER
 @router.post("/admin/register", response_model=TokenResponse)
-def admin_register(req: AdminRegisterRequest, db: Session = Depends(get_db)):
+def admin_register(req: AdminRegisterRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     ADMIN_SECRET = os.getenv("ADMIN_SECRET", "super-secret-admin-key")
     if req.admin_secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Invalid admin secret")
@@ -79,6 +81,7 @@ def admin_register(req: AdminRegisterRequest, db: Session = Depends(get_db)):
         db.refresh(user)
         
         payload = {"user_id": user.id, "role": user.role, "username": user.username}
+        background_tasks.add_task(log_audit, "Auth Service", "Admin Registered", user.id, f"Admin {user.username} registered")
         return {
             "access_token": create_access_token(payload),
             "refresh_token": create_refresh_token(payload),
@@ -92,7 +95,7 @@ def admin_register(req: AdminRegisterRequest, db: Session = Depends(get_db)):
 
 # 🛡️ ADMIN LOGIN
 @router.post("/admin/login", response_model=TokenResponse)
-def admin_login(req: LoginRequest, db: Session = Depends(get_db)):
+def admin_login(req: LoginRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(UserAuth).filter(UserAuth.email == req.email).first()
 
     if not user or not verify_password(req.password, user.password_hash):
@@ -105,6 +108,7 @@ def admin_login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Account suspended")
 
     payload = {"user_id": user.id, "role": user.role, "username": user.username}
+    background_tasks.add_task(log_audit, "Auth Service", "Admin Login", user.id, f"Admin {user.username} logged in")
     return {
         "access_token": create_access_token(payload),
         "refresh_token": create_refresh_token(payload),
@@ -116,7 +120,7 @@ def admin_login(req: LoginRequest, db: Session = Depends(get_db)):
 
 # ✅ LOGIN
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: LoginRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(UserAuth).filter(UserAuth.email == req.email).first()
 
     if not user or not verify_password(req.password, user.password_hash):
@@ -128,6 +132,8 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     payload = {"user_id": user.id, "role": user.role, "username": user.username}
     access_token = create_access_token(payload)
     refresh_token = create_refresh_token(payload)
+
+    background_tasks.add_task(log_audit, "Auth Service", "User Login", user.id, f"User {user.username} logged in")
 
     return {
         "access_token": access_token,
@@ -244,7 +250,8 @@ def check_email(email: str, db: Session = Depends(get_db)):
 @router.patch("/admin/suspend/{user_id}")
 def toggle_user_suspension(
     user_id: int, 
-    suspend: bool, 
+    suspend: bool,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db), 
     admin=Depends(get_current_admin)
 ):
@@ -259,4 +266,5 @@ def toggle_user_suspension(
     db.commit()
     
     status = "suspended" if suspend else "unsuspended"
+    background_tasks.add_task(log_audit, "Auth Service", "User Suspension Toggled", admin.id, f"Admin {admin.username} {status} user {user.username} (ID: {user.id})")
     return {"message": f"User {status} successfully"}

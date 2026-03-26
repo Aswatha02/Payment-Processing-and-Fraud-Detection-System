@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Header, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 import httpx
 import os
 from .rules import evaluate_fraud
+from .audit import log_audit
 
 router = APIRouter(prefix="/fraud", tags=["Fraud"])
 
@@ -50,7 +51,7 @@ class FraudRecord(BaseModel):
 fraud_db = []
 
 @router.post("/analyze")
-async def analyze_fraud(req: FraudRequest):
+async def analyze_fraud(req: FraudRequest, background_tasks: BackgroundTasks):
     # Evaluate risk
     result = evaluate_fraud(req.user_id, req.amount)
     
@@ -66,6 +67,11 @@ async def analyze_fraud(req: FraudRequest):
     )
     fraud_db.append(record.dict())
     
+    if result["status"] == "FLAGGED":
+        background_tasks.add_task(log_audit, "Fraud Service", "Fraud Flagged", req.user_id, f"Transaction flagged with score {result['risk_score']}. Reasons: {', '.join(result['reasons'])}")
+    else:
+        background_tasks.add_task(log_audit, "Fraud Service", "Transaction Analyzed", req.user_id, f"Transaction passed with score {result['risk_score']}")
+        
     return result
 
 @router.get("/")

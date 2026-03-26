@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Transaction, Wallet, Ledger
 from .schemas import TransferRequest
 from .service import debit_wallet, credit_wallet, get_user_name, check_fraud
+from .audit import log_audit
 import httpx
 import os
 
@@ -35,6 +36,7 @@ async def validate_user_token(auth: str) -> dict:
 @router.post("/transfer")
 async def transfer_money(
     req: TransferRequest,
+    background_tasks: BackgroundTasks,
     authorization: str = Header(...),
     db: Session = Depends(get_db)
 ):
@@ -71,6 +73,7 @@ async def transfer_money(
     if fraud_result.get("status") == "FLAGGED":
         transaction.status = "FLAGGED"
         db.commit()
+        background_tasks.add_task(log_audit, "Transaction Service", "Transaction Flagged", req.sender_id, f"Transfer of {req.amount} to {req.receiver_id} flagged for fraud")
         raise HTTPException(status_code=400, detail="Transaction flagged for suspicious activity")
 
     try:
@@ -93,6 +96,8 @@ async def transfer_money(
 
     transaction.status = "COMPLETED"
     db.commit()
+
+    background_tasks.add_task(log_audit, "Transaction Service", "Transaction Completed", req.sender_id, f"Transferred {req.amount} to {req.receiver_id} (TX ID: {transaction.id})")
 
     return {
         "message": "Transfer successful",

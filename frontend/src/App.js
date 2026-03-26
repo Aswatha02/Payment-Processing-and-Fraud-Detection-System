@@ -8,6 +8,7 @@ import KYCSubmit from './components/Profile/KYCSubmit';
 import WalletDashboard from './components/Wallet/WalletDashboard';
 import AdminUsers from './components/Admin/AdminUsers';
 import AdminKYC from './components/Admin/AdminKYC';
+import AdminAudits from './components/Admin/AdminAudits';
 import AdminLogin from './components/Auth/AdminLogin';
 import AdminRegister from './components/Auth/AdminRegister';
 import './App.css';
@@ -56,6 +57,7 @@ function App() {
           <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/admin/kyc" element={<AdminRoute><AdminKYC /></AdminRoute>} />
+          <Route path="/admin/audits" element={<AdminRoute><AdminAudits /></AdminRoute>} />
           
           {/* Home */}
           <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
