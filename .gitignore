@@ -25,4 +25,6 @@ dist/
 *.egg-info/
 
 # Node.js
-node_modules/
+node_modules/nul
+NUL
+*.nul

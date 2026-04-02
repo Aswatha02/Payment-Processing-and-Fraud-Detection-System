@@ -40,6 +40,22 @@ async def credit_wallet(user_id: int, amount: float):
             raise HTTPException(status_code=503, detail="Wallet service unavailable")
 
 
+async def get_wallet_balance(user_id: int, auth_token: str) -> float:
+    """Fetch wallet balance from Wallet Service"""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{WALLET_URL}/wallet/{user_id}/balance",
+                headers={"Authorization": auth_token},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                return response.json().get("balance", 0.0)
+        except Exception as e:
+            print(f"Failed to fetch balance for User {user_id}: {e}")
+    return 0.0
+
+
 USER_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8001")
 
 async def get_user_name(user_id: int) -> str:

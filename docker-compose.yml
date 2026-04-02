@@ -1,0 +1,168 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: payment_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sreeknr@0302
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-database.sql:/docker-entrypoint-initdb.d/init-database.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - payment-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: payment_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - payment-network
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth_service
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/auth_db
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - ADMIN_SECRET=${ADMIN_SECRET}
+      - AUDIT_SERVICE_URL=http://audit-service:8001
+    networks:
+      - payment-network
+
+  user-service:
+    build: ./user-service
+    container_name: user_service
+    ports:
+      - "8005:8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/user_db
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - SECRET_KEY=${SECRET_KEY}
+    networks:
+      - payment-network
+
+  transaction-service:
+    build: ./transaction-service
+    container_name: transaction_service
+    ports:
+      - "8010:8010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/transaction_db
+      - USER_SERVICE_URL=http://user-service:8005
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - WALLET_SERVICE_URL=http://wallet-service:8006
+      - SECRET_KEY=${SECRET_KEY}
+    networks:
+      - payment-network
+
+  fraud-service:
+    build: "./fraud-service"
+    container_name: fraud_service
+    ports:
+      - "8015:8015"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      transaction-service:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/fraud_db
+      - TRANSACTION_SERVICE_URL=http://transaction-service:8010
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - SECRET_KEY=${SECRET_KEY}
+    networks:
+      - payment-network
+
+  notification-service:
+    build: "./notification-service"
+    container_name: notification_service
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/notification_db
+      - USER_SERVICE_URL=http://user-service:8005
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - SECRET_KEY=${SECRET_KEY}
+    networks:
+      - payment-network
+
+  wallet-service:
+    build: ./wallet-service
+    container_name: wallet_service
+    ports:
+      - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/wallet_db
+      - USER_SERVICE_URL=http://user-service:8005
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - SECRET_KEY=${SECRET_KEY}
+    networks:
+      - payment-network
+
+  audit-service:
+    build: "./audit-service"
+    container_name: audit_service
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:sreeknr%400302@postgres:5432/audit_db
+    networks:
+      - payment-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+      - user-service
+    networks:
+      - payment-network
+
+volumes:
+  postgres_data:
+
+networks:
+  payment-network:
+    driver: bridge

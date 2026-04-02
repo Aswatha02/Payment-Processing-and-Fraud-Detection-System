@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Transaction, Wallet, Ledger
 from .schemas import TransferRequest
-from .service import debit_wallet, credit_wallet, get_user_name, check_fraud, send_notification
+from .service import debit_wallet, credit_wallet, get_user_name, check_fraud, send_notification, get_wallet_balance
 from .audit import log_audit
 import httpx
 import os
@@ -227,9 +227,8 @@ async def get_user_dashboard(
         Transaction.status == "COMPLETED"
     ).count()
     
-    # Let's get balance from Wallet
-    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
-    balance = wallet.balance if wallet else 0
+    # Fetch real balance via Wallet Service API
+    balance = await get_wallet_balance(user_id, authorization)
 
     return {
         "total_transactions": total_txs,

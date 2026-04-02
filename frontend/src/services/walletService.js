@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-const WALLET_API_URL = process.env.REACT_APP_WALLET_API_URL || 'http://localhost:8002';
+const WALLET_API_URL = process.env.REACT_APP_WALLET_API_URL || 'http://localhost:8006';
 
 const walletAPI = axios.create({
   baseURL: WALLET_API_URL,
 });
 
-const TRANSACTION_API_URL = process.env.REACT_APP_TRANSACTION_API_URL || 'http://localhost:8003';
+const TRANSACTION_API_URL = process.env.REACT_APP_TRANSACTION_API_URL || 'http://localhost:8004';
 const transactionAPI = axios.create({
   baseURL: TRANSACTION_API_URL,
 });

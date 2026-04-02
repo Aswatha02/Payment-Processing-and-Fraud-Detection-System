@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const FRAUD_API_URL = process.env.REACT_APP_FRAUD_API_URL || 'http://localhost:8004';
+const FRAUD_API_URL = process.env.REACT_APP_FRAUD_API_URL || 'http://localhost:8002';
 
 const fraudAPI = axios.create({
   baseURL: FRAUD_API_URL,

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8006/notifications';
+const API_URL = 'http://localhost:8003/notifications';
 
 const getNotifications = async (userId) => {
     if (!userId) return [];

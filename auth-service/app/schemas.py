@@ -21,8 +21,10 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
+        # Only enforce minimum length, NO maximum length
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long.")
+        # Optional: Keep strength requirements for security
         if not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter.")
         if not re.search(r"[a-z]", v):
@@ -40,7 +42,7 @@ class UserOut(BaseModel):
     id: int
     username: str
     email: EmailStr
-    role: Optional[str] = "USER"  # Add role field
+    role: Optional[str] = "USER"
     is_suspended: Optional[bool] = False
     created_at: Optional[datetime] = None
 
@@ -60,7 +62,7 @@ class Token(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    refresh_token: str  # Add refresh_token
+    refresh_token: str
     token_type: str = "bearer"
     user: UserOut
 

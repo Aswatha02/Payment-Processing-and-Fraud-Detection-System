@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const AUTH_API_URL = process.env.REACT_APP_AUTH_API_URL || 'http://localhost:8000';
-const USER_API_URL = process.env.REACT_APP_USER_API_URL || 'http://localhost:8001';
+const USER_API_URL = process.env.REACT_APP_USER_API_URL || 'http://localhost:8005';
 
 // Create axios instances
 const authAPI = axios.create({

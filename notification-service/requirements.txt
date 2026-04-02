@@ -3,3 +3,6 @@ uvicorn
 sqlalchemy
 pydantic
 python-dotenv
+psycopg2-binary
+requests
+httpx
